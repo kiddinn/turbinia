@@ -89,6 +89,12 @@ def main():
       help='Create new requests with this Request ID',
       required=False)
   parser.add_argument(
+      '-R',
+      '--run_local',
+      action='store_true',
+      help='Run completely locally without any server or other infrastructure. '
+      'This can be used to run one-off Tasks to process data locally.')
+  parser.add_argument(
       '-S',
       '--server',
       action='store_true',
@@ -140,6 +146,11 @@ def main():
       default=60,
       type=int,
       help='Number of seconds to wait between polling for task state info')
+  parser.add_argument(
+      '-t',
+      '--task',
+      help='The name of a single Task to run locally (must be used with '
+      '--run_local.')
   parser.add_argument(
       '-w',
       '--wait',
@@ -322,7 +333,7 @@ def main():
   filter_patterns = None
   if (args.filter_patterns_file and
       not os.path.exists(args.filter_patterns_file)):
-    log.warning('Filter patterns file {0:s} does not exist.')
+    log.error('Filter patterns file {0:s} does not exist.')
     sys.exit(1)
   elif args.filter_patterns_file:
     try:
@@ -336,10 +347,23 @@ def main():
   if args.command not in ('psqworker', 'server'):
     if args.use_celery:
       client = TurbiniaCeleryClient()
+    elif args.run_local:
+      client = TurbiniaClient(run_local=True)
     else:
       client = TurbiniaClient()
   else:
     client = None
+
+  server_flags_set = args.server or args.use_celery or args.command == 'server'
+  worker_flags_set = (
+      args.use_celery or args.command in ('psqworker', 'celeryworker'))
+  if args.run_local and (server_flags_set or worker_flags_set):
+    log.error('--run_local flag is not compatible with server/worker flags')
+    sys.exit(1)
+
+  if args.run_local and not args.task:
+    log.error('--run_local flag requires --task flag')
+    sys.exit(1)
 
   if args.output_dir:
     config.OUTPUT_DIR = args.output_dir
@@ -463,13 +487,14 @@ def main():
       log.warning(msg)
     else:
       msg += ' Use --force_evidence if you are sure you want to do this.'
-      log.warning(msg)
+      log.error(msg)
       sys.exit(1)
 
   # If we have evidence to process and we also want to run as a server, then
   # we'll just process the evidence directly rather than send it through the
   # PubSub frontend interface.  If we're not running as a server then we will
   # create a new TurbiniaRequest and send it over PubSub.
+  request = None
   if evidence_ and args.server:
     server = TurbiniaServer()
     server.add_evidence(evidence_)
@@ -488,7 +513,10 @@ def main():
     else:
       log.info('Creating request {0:s} with evidence {1:s}'.format(
           request.request_id, evidence_.name))
-      client.send_request(request)
+      if not args.run_local:
+        client.send_request(request)
+      else:
+        log.debug('--run_local specified so not sending request to server')
 
     if args.wait:
       log.info('Waiting for request {0:s} to complete'.format(
@@ -506,6 +534,16 @@ def main():
           region=region,
           request_id=request.request_id,
           all_fields=args.all_fields))
+
+  if args.run_local and not evidence_:
+    log.error('Evidence must be specified if using --run_local')
+    sys.exit(1)
+  if args.run_local and evidence_.cloud_only:
+    log.error('--run_local cannot be used with Cloud only Evidence types')
+    sys.exit(1)
+  if args.run_local and evidence_:
+    result = client.run_local_task(args.task, request)
+    log.info('Task execution result: {0:s}'.format(result))
 
   log.info('Done.')
   sys.exit(0)
