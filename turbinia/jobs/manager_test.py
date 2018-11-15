@@ -21,6 +21,7 @@ class TestJob1(interface.TurbiniaJob):
     """Returns None, for testing."""
     return None
 
+
 class TestJob2(interface.TurbiniaJob):
   """Test job."""
 
@@ -30,6 +31,7 @@ class TestJob2(interface.TurbiniaJob):
   def create_tasks(self, evidence):
     """Returns None, for testing."""
     return None
+
 
 class JobsManagerTest(unittest.TestCase):
   """Tests for the jobs manager."""
@@ -52,23 +54,18 @@ class JobsManagerTest(unittest.TestCase):
     """Tests the registration and deregistration of jobs."""
     number_of_jobs = len(manager.JobsManager._job_classes)
     manager.JobsManager.RegisterJob(TestJob1)
-    self.assertEqual(
-        number_of_jobs + 1, len(
-            manager.JobsManager._job_classes))
+    self.assertEqual(number_of_jobs + 1, len(manager.JobsManager._job_classes))
 
     with self.assertRaises(KeyError):
       manager.JobsManager.RegisterJob(TestJob1)
 
     manager.JobsManager.DeregisterJob(TestJob1)
 
-    self.assertEqual(
-        number_of_jobs, len(manager.JobsManager._job_classes))
+    self.assertEqual(number_of_jobs, len(manager.JobsManager._job_classes))
 
     number_of_jobs = len(manager.JobsManager._job_classes)
     manager.JobsManager.RegisterJobs([TestJob1, TestJob2])
-    self.assertEqual(
-        number_of_jobs + 2, len(
-            manager.JobsManager._job_classes))
+    self.assertEqual(number_of_jobs + 2, len(manager.JobsManager._job_classes))
 
     with self.assertRaises(KeyError):
       manager.JobsManager.RegisterJob(TestJob1)
@@ -76,8 +73,7 @@ class JobsManagerTest(unittest.TestCase):
     manager.JobsManager.DeregisterJob(TestJob1)
     manager.JobsManager.DeregisterJob(TestJob2)
 
-    self.assertEqual(
-        number_of_jobs, len(manager.JobsManager._job_classes))
+    self.assertEqual(number_of_jobs, len(manager.JobsManager._job_classes))
 
   def testGetJobInstance(self):
     """Tests the GetJobInstance function."""
