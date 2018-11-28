@@ -23,3 +23,5 @@ from turbinia.jobs import sshd
 from turbinia.jobs import strings
 from turbinia.jobs import tomcat
 from turbinia.jobs import worker_stat
+# TODO: put in alphabetical order.
+from turbinia.jobs import secret_project

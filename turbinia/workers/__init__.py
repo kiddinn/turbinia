@@ -501,3 +501,5 @@ class TurbiniaTask(object):
         TurbiniaTaskResult object.
     """
     raise NotImplementedError
+# TODO: put in alphabetical order.
+from turbinia.workers import secret_project
